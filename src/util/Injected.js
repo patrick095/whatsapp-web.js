@@ -355,28 +355,28 @@ exports.ExposeStore = (moduleRaidStr) => {
         return func(...args);
     });
 
-    window.injectToFunction({index: 0, name: "createFanoutMsgStanza", property: "createFanoutMsgStanza"}, async (func, ...args) => {
+    window.injectToFunction({index: 0, name: 'createFanoutMsgStanza', property: 'createFanoutMsgStanza'}, async (func, ...args) => {
         const [, proto] = args;
 
         let buttonNode = null;
 
         if (proto.buttonsMessage) {
-          buttonNode = window.Store.SocketSmax('buttons');
+            buttonNode = window.Store.SocketSmax('buttons');
         } else if (proto.listMessage) {
-          const listType = proto.listMessage.listType || 0;
+            const listType = proto.listMessage.listType || 0;
 
-          const types = ['unknown', 'single_select', 'product_list'];
+            const types = ['unknown', 'single_select', 'product_list'];
 
-          buttonNode = window.Store.SocketSmax('list', {
-            v: '2',
-            type: types[listType],
-          });
+            buttonNode = window.Store.SocketSmax('list', {
+                v: '2',
+                type: types[listType],
+            });
         }
 
         const node = await func(...args);
 
         if (!buttonNode) {
-          return node;
+            return node;
         }
 
         const content = node.content;
@@ -384,20 +384,20 @@ exports.ExposeStore = (moduleRaidStr) => {
         let bizNode = content.find((c) => c.tag === 'biz');
 
         if (!bizNode) {
-          bizNode = window.Store.SocketSmax('biz', {}, null);
-          content.push(bizNode);
+            bizNode = window.Store.SocketSmax('biz', {}, null);
+            content.push(bizNode);
         }
 
         let hasButtonNode = false;
 
         if (Array.isArray(bizNode.content)) {
-          hasButtonNode = !!bizNode.content.find((c) => c.tag === buttonNode?.tag);
+            hasButtonNode = !!bizNode.content.find((c) => c.tag === buttonNode?.tag);
         } else {
-          bizNode.content = [];
+            bizNode.content = [];
         }
 
         if (!hasButtonNode) {
-          bizNode.content.push(buttonNode);
+            bizNode.content.push(buttonNode);
         }
 
         return node;
@@ -510,23 +510,37 @@ exports.LoadUtils = () => {
         else {
         }
         **/
+
         returnObject.isDynamicReplyButtonsMsg = true;
 
         returnObject.dynamicReplyButtons = buttonsOptions.buttons.map((button, index) => ({
-            buttonId: button.quickReplyButton.id.toString() || `${index}`,
+            buttonId: button.quickReplyButton?.id.toString() || `${index}`,
             buttonText: {displayText: button.quickReplyButton?.displayText},
             type: 1,
         }));
 
         // For UI only
         returnObject.replyButtons = new window.Store.ButtonCollection();
-        returnObject.replyButtons.add(returnObject.dynamicReplyButtons.map((button) => new window.Store.ReplyButtonModel({
-            id: button.buttonId,
-            displayText: button.buttonText?.displayText || undefined,
-        })));
+        returnObject.replyButtons.add(
+            returnObject.dynamicReplyButtons.map((button, i) => {
+                if (button.urlButton) {
+                    return new window.Store.TemplateButtonModel({
+                        id: i,
+                        displayText: button.urlButton?.displayText,
+                        url: button.urlButton?.url,
+                        subtype: 'url',
+                    });
+                }
+
+                return new window.Store.ReplyButtonModel({
+                    id: button.buttonId,
+                    displayText: button.buttonText?.displayText || undefined,
+                });
+            })
+        );
         
         return returnObject;
-    }
+    };
 
     window.WWebJS.sendMessage = async (chat, content, options = {}) => {
         let attOptions = {};
